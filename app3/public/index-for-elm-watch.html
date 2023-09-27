@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Elm-Watch</title>
+    <style> body {margin: 0px; font-family: Verdana, Helvetica, Tahoma, Arial, sans-serif}</style>
+</head>
+
+<body>
+    <script src="../temp/elm.js"></script>
+    <script src="../src/elm-wrapper.js"></script>
+    <!-- <script src="../src/elm.js"></script> -->
+    <script src="../src/starter.js"></script>
+    <div style="padding: 5px">
+        <button onclick="mount()">Mount</button>
+        <button onclick="unmount()">Unmount</button>
+    </div>
+    <div style="padding: 5px">
+        Props
+        <button onclick="app?.send({user:null})">Sign out</button>
+        <button onclick="app?.send({user:'megumi.suzuki'})">Sign in</button>
+        <button onclick="app?.send({language:'en-US'})">en-US</button>
+        <button onclick="app?.send({language:'ja-JP'})">ja-JP</button>
+        <button onclick="app?.send({lightMode:true})">Light</button>
+        <button onclick="app?.send({lightMode:false})">Dark</button>
+    </div>
+    <div style="padding: 5px">
+        Events
+        <button onclick='window.dispatchEvent( new CustomEvent("changeUser", { detail: null }) )'>Sign out</button>
+        <button onclick='window.dispatchEvent( new CustomEvent("changeUser", { detail: "megumi.suzuki" }) )'>Sign in</button>
+        <button onclick='window.dispatchEvent( new CustomEvent("changeLanguage", { detail: "en-US" }) )'>en-US</button>
+        <button onclick='window.dispatchEvent( new CustomEvent("changeLanguage", { detail: "ja-JP" }) )'>js-JP</button>
+        <button onclick='window.dispatchEvent( new CustomEvent("changeMode", { detail: "light" }) )'>Light</button>
+        <button onclick='window.dispatchEvent( new CustomEvent("changeMode", { detail: "dark" }) )'>Dark</button>
+    </div>
+    <script>mount()</script>
+</body>
+
+</html>

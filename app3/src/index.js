@@ -2,6 +2,6 @@
 
 require("./elm");
 
-var app = Elm.Main.init({
+var app = ElmMFE.Main.init({
   node: document.getElementById("main"),
 });

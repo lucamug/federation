@@ -1,0 +1,5 @@
+#!/bin/bash
+set -eu
+
+elm make src/Main.elm --output=temp/build-elm.js --debug
+node cmd/minify-elm.js
