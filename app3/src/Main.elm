@@ -6,12 +6,22 @@ import Html.Events exposing (onClick)
 
 
 type alias Model =
-    { count : Int }
+    { count : Int
+    , url : String
+    }
 
 
-initialModel : Model
-initialModel =
-    { count = 0 }
+type alias Flags =
+    { url : String }
+
+
+init : Flags -> ( Model, Cmd msg )
+init flags =
+    ( { count = 0
+      , url = flags.url
+      }
+    , Cmd.none
+    )
 
 
 type Msg
@@ -19,14 +29,14 @@ type Msg
     | Decrement
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd msg )
 update msg model =
     case msg of
         Increment ->
-            { model | count = model.count + 1 }
+            ( { model | count = model.count + 1 }, Cmd.none )
 
         Decrement ->
-            { model | count = model.count - 1 }
+            ( { model | count = model.count - 1 }, Cmd.none )
 
 
 view : Model -> Html Msg
@@ -38,10 +48,11 @@ view model =
         ]
 
 
-main : Program () Model Msg
+main : Program Flags Model Msg
 main =
-    Browser.sandbox
-        { init = initialModel
+    Browser.element
+        { init = init
         , view = view
         , update = update
+        , subscriptions = \_ -> Sub.none
         }

@@ -25,3 +25,14 @@ To avoid issues with Netskope
 
 export NODE_TLS_REJECT_UNAUTHORIZED=0; npm install --save elm-webpack-loader
 
+Instal `elm-watch` with
+
+```
+npm install -g elm-watch@1.2.0-beta.3
+```
+
+Install Elm globally with
+
+```
+npm install -g @lydell/elm
+```
