@@ -44,4 +44,4 @@ cd app3
 elm-watch hot
 ```
 
-This will start a server at http://localhost:8002/
+This will start a server at http://localhost:8002/public/index-for-elm-watch.html

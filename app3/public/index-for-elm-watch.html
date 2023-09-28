@@ -12,22 +12,27 @@
   <script src="../elm-compiled-by-elm-watch/elm.js"></script>
   <script src="../src/elm-wrapper.js"></script>
   <script>
-    const app = MSSP.init({
+    const app = ElmWrapped.init({
       node: document.getElementById("main"),
       flags: 
         { user: "taro.tanaka"
         , language: "ja-JP"
         }
     });
-    app.sendData( { language: "it-IT" } );
-    app.sendData( { user: "yoko.sato" } );
-    app.sendData( { a: 1, b: 2 } );
-    app.sendData( 32 );
-    app.sendData( "41" );
-    app.sendData( true );
-    app.sendData( null );
-    app.sendData( undefined );
-    app.sendData( NaN );
+    app.receive.subscribe((string) => {console.log(`Received by the host: "${string}"`)});
+    app.send( null );
+    app.send( { language: "it-IT" } );
+    app.send( { a: 1, b: 2 } );
+    app.send( 32 );
+    app.send( "41" );
+    app.send( true );
+    app.send( undefined );
+    app.send( NaN );
+    app.send({
+        language: null,
+        user: null
+    });
+    app.send( { user: "yoko.sato" } );
   </script>
 </body>
 

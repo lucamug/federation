@@ -1,4 +1,4 @@
-const MSSP = 
+const ElmWrapped = 
     { init: obj => {
         const app = Elm.Main.init(
             { node: obj.node
@@ -18,7 +18,13 @@ const MSSP =
                 app.ports.localStorageFromJsToElm.send(myToString(localStorage));
             }
         }, false);
-        return { sendData : dataAsString => { app.ports.stringFromJsToElm.send( myToString(dataAsString) ) } };
+        window.addEventListener('popstate', () => {
+            app.ports.stringFromJsToElm.send( myToString({ url: location.href }) );
+        });
+        return {
+                send : dataAsString => { app.ports.stringFromJsToElm.send( myToString(dataAsString) ) },
+                receive : app.ports.stringFromElmToJs 
+            };
         }
     }
     

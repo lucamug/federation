@@ -21,6 +21,7 @@ type alias Model =
     , fromJsHistory : List String
     , localStorage : List ( String, String )
     , cookies : List ( String, String )
+    , string : String
     }
 
 
@@ -34,28 +35,83 @@ codecModel =
         |> Codec.field "fromJsHistory" .fromJsHistory (Codec.list Codec.string)
         |> Codec.field "localStorage" .localStorage (Codec.list (Codec.tuple Codec.string Codec.string))
         |> Codec.field "cookies" .cookies (Codec.list (Codec.tuple Codec.string Codec.string))
+        |> Codec.field "string" .string Codec.string
         |> Codec.buildObject
 
 
-type alias FlagsFromHorizon =
-    { user : Maybe String
-    , language : Maybe String
-    }
+type alias FlagUser =
+    { user : Maybe String }
 
 
-defaultFlagsFromHorizon : FlagsFromHorizon
-defaultFlagsFromHorizon =
-    { user = Nothing
-    , language = Nothing
-    }
+type alias FlagLanguage =
+    { language : Maybe String }
 
 
-codecFlagsFromHorizon : Codec.Codec FlagsFromHorizon
-codecFlagsFromHorizon =
-    Codec.object FlagsFromHorizon
-        |> Codec.optionalNullableField "user" .user Codec.string
-        |> Codec.optionalNullableField "language" .language Codec.string
+type alias FlagUrl =
+    { url : String }
+
+
+codecFlagUser : Codec.Codec FlagUser
+codecFlagUser =
+    Codec.object FlagUser
+        |> Codec.field "user" .user (Codec.maybe Codec.string)
         |> Codec.buildObject
+
+
+codecFlagLanguage : Codec.Codec FlagLanguage
+codecFlagLanguage =
+    Codec.object FlagLanguage
+        |> Codec.field "language" .language (Codec.maybe Codec.string)
+        |> Codec.buildObject
+
+
+codecFlagUrl : Codec.Codec FlagUrl
+codecFlagUrl =
+    Codec.object FlagUrl
+        |> Codec.field "url" .url Codec.string
+        |> Codec.buildObject
+
+
+updateUser : String -> { a | user : Maybe String } -> { a | user : Maybe String }
+updateUser string model =
+    string
+        |> Codec.decodeString codecFlagUser
+        |> (\res ->
+                case res of
+                    Ok flag ->
+                        { model | user = flag.user }
+
+                    Err _ ->
+                        model
+           )
+
+
+updateLanguage : String -> { a | language : String } -> { a | language : String }
+updateLanguage string model =
+    string
+        |> Codec.decodeString codecFlagLanguage
+        |> (\res ->
+                case res of
+                    Ok flag ->
+                        { model | language = Maybe.withDefault defaultLanguage flag.language }
+
+                    Err _ ->
+                        model
+           )
+
+
+updateUrl : String -> { a | url : String } -> { a | url : String }
+updateUrl string model =
+    string
+        |> Codec.decodeString codecFlagUrl
+        |> (\res ->
+                case res of
+                    Ok flag ->
+                        { model | url = flag.url }
+
+                    Err _ ->
+                        model
+           )
 
 
 type alias Flags =
@@ -73,21 +129,17 @@ defaultLanguage =
 
 init : Flags -> ( Model, Cmd msg )
 init flags =
-    let
-        flagsFromHorizon : FlagsFromHorizon
-        flagsFromHorizon =
-            flags.flagsFromHorizon
-                |> Codec.decodeString codecFlagsFromHorizon
-                |> Result.withDefault defaultFlagsFromHorizon
-    in
     ( { counter = 0
-      , user = flagsFromHorizon.user
-      , language = Maybe.withDefault defaultLanguage flagsFromHorizon.language
+      , user = Nothing
+      , language = defaultLanguage
       , url = flags.url
       , fromJsHistory = []
       , localStorage = parseLocalStorage flags.localStorage
       , cookies = parseCookies flags.cookies
+      , string = "String to Host"
       }
+        |> updateUser flags.flagsFromHorizon
+        |> updateLanguage flags.flagsFromHorizon
     , Cmd.none
     )
 
@@ -122,11 +174,13 @@ unsafePercentageDecode string =
 
 
 type Msg
-    = ChangeCounter1 Int
-    | ChangeCounter2 Int
+    = NoOp
+    | ChangeCounter Int
+    | ChangeSyncedCounter Int
     | StringFromJsToElm String
     | LocalStorageFromJsToElm String
-    | NoOp
+    | ChangeString String
+    | SendString String
 
 
 syncedCounterKeyName : String
@@ -140,41 +194,23 @@ update msg model =
         NoOp ->
             ( model, Cmd.none )
 
-        ChangeCounter1 int ->
+        ChangeString string ->
+            ( { model | string = string }, Cmd.none )
+
+        SendString string ->
+            ( model, stringFromElmToJs string )
+
+        ChangeCounter int ->
             ( { model | counter = int }, Cmd.none )
 
-        ChangeCounter2 int ->
-            -- ( { model | counter = model.counter + 1 }, Cmd.none )
+        ChangeSyncedCounter int ->
             ( model, setLocalStorageItem ( syncedCounterKeyName, String.fromInt int ) )
 
-        -- Decrement ->
-        --     ( { model | counter = model.counter - 1 }, Cmd.none )
         StringFromJsToElm string ->
-            let
-                flagsFromHorizon : FlagsFromHorizon
-                flagsFromHorizon =
-                    string
-                        |> Codec.decodeString codecFlagsFromHorizon
-                        |> Result.withDefault defaultFlagsFromHorizon
-                        |> Debug.log "xxx"
-            in
-            ( { model
-                | fromJsHistory = string :: model.fromJsHistory
-                , user =
-                    case flagsFromHorizon.user of
-                        Just user ->
-                            Just user
-
-                        Nothing ->
-                            model.user
-                , language =
-                    case flagsFromHorizon.language of
-                        Just language ->
-                            language
-
-                        Nothing ->
-                            model.language
-              }
+            ( { model | fromJsHistory = string :: model.fromJsHistory }
+                |> updateUser string
+                |> updateLanguage string
+                |> updateUrl string
             , Cmd.none
             )
 
@@ -182,8 +218,8 @@ update msg model =
             ( { model | localStorage = parseLocalStorage string }, Cmd.none )
 
 
-buttonAttrs : List (Attribute msg)
-buttonAttrs =
+attrsButton : List (Attribute msg)
+attrsButton =
     [ Border.rounded 5
     , Background.color <| rgb 0.9 0.9 0.9
     , width <| px 40
@@ -191,9 +227,17 @@ buttonAttrs =
     ]
 
 
+attrsLink : List (Attribute msg)
+attrsLink =
+    [ Font.color <| rgb 0 0 0.8
+    , Font.underline
+    ]
+
+
 view : Model -> Html.Html Msg
 view model =
     let
+        syncedCounter : Int
         syncedCounter =
             model.localStorage
                 |> Dict.fromList
@@ -203,33 +247,65 @@ view model =
     in
     layout [ padding 20, Font.size 16, Font.family [] ] <|
         column [ spacing 20, width fill ]
-            [ paragraph [ Font.size 20 ] [ text "Microfrontend POC" ]
-            , wrappedRow [ spacing 20 ]
-                [ viewCounter model.counter ChangeCounter1
-                , viewCounter syncedCounter ChangeCounter2
+            [ paragraph [ Font.size 20, paddingEach { top = 0, right = 0, bottom = 20, left = 0 } ]
+                [ text "Microfrontend POC - "
+                , text
+                    (model.url
+                        |> Url.fromString
+                        |> Maybe.andThen .fragment
+                        |> Maybe.withDefault "Home"
+                        |> (\name ->
+                                if String.isEmpty name then
+                                    "Home"
+
+                                else
+                                    name
+                           )
+                    )
+                , el [ alignRight, Font.size 13 ] <| text <| Maybe.withDefault "" model.user
                 ]
-            , paragraph [ Font.size 20 ] [ text "Model" ]
-            , Input.multiline [ width fill, Border.rounded 5 ]
-                { onChange = \_ -> NoOp
-                , text = Codec.encodeToString 4 codecModel model
-                , placeholder = Nothing
-                , label = Input.labelHidden ""
-                , spellcheck = False
-                }
+            , row [ spacing 40, width fill ]
+                [ column [ spacing 10, alignTop ]
+                    [ link attrsLink { url = "#", label = text "Home" }
+                    , link attrsLink { url = "#page1", label = text "Page 1" }
+                    , link attrsLink { url = "#page2", label = text "Page 2" }
+                    ]
+                , column [ width fill, spacing 20 ]
+                    [ wrappedRow [ spacing 20 ]
+                        [ viewCounter "Counter" model.counter ChangeCounter
+                        , viewCounter "Synced counter" syncedCounter ChangeSyncedCounter
+                        ]
+                    , row [ spacing 10, width fill ]
+                        [ Input.text [ width fill, height <| px 42 ] { onChange = ChangeString, text = model.string, placeholder = Nothing, label = Input.labelHidden "" }
+                        , Input.button [ Background.color <| rgb 0.8 0.8 0.8, height <| px 42, padding 10, Border.rounded 5 ] { label = text "Send to Host", onPress = Just <| SendString model.string }
+                        ]
+                    , paragraph [] [ text "Model" ]
+                    , Input.multiline [ width fill, Border.rounded 5 ]
+                        { onChange = \_ -> NoOp
+                        , text = Codec.encodeToString 4 codecModel model
+                        , placeholder = Nothing
+                        , label = Input.labelHidden ""
+                        , spellcheck = False
+                        }
+                    ]
+                ]
             ]
 
 
-viewCounter : Int -> (Int -> msg) -> Element msg
-viewCounter counter msg =
-    row
-        [ spacing 10
-        , padding 10
-        , Background.color <| rgb255 18 147 216
-        , Border.rounded 10
-        ]
-        [ Input.button buttonAttrs { label = el [ Font.size 30, centerX, moveUp 2 ] <| text "-", onPress = Just <| msg (counter - 1) }
-        , el [ Font.size 20, Font.color <| rgb 1 1 1, width <| px 60, Font.center ] <| text <| String.fromInt counter
-        , Input.button buttonAttrs { label = el [ Font.size 30, centerX, moveUp 2 ] <| text "+", onPress = Just <| msg (counter + 1) }
+viewCounter : String -> Int -> (Int -> msg) -> Element msg
+viewCounter name counter msg =
+    column [ spacing 5 ]
+        [ paragraph [ Font.size 13 ] [ text name ]
+        , row
+            [ spacing 10
+            , padding 10
+            , Background.color <| rgb255 18 147 216
+            , Border.rounded 10
+            ]
+            [ Input.button attrsButton { label = el [ Font.size 30, centerX, moveUp 2 ] <| text "-", onPress = Just <| msg (counter - 1) }
+            , el [ Font.size 20, Font.color <| rgb 1 1 1, width <| px 60, Font.center ] <| text <| String.fromInt counter
+            , Input.button attrsButton { label = el [ Font.size 30, centerX, moveUp 2 ] <| text "+", onPress = Just <| msg (counter + 1) }
+            ]
         ]
 
 
@@ -246,6 +322,9 @@ main =
                     , localStorageFromJsToElm LocalStorageFromJsToElm
                     ]
         }
+
+
+port stringFromElmToJs : String -> Cmd msg
 
 
 port stringFromJsToElm : (String -> msg) -> Sub msg
