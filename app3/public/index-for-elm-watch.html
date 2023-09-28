@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Elm-Watch</title>
+  <style> body {margin: 0px; font-family: Verdana, Helvetica, Tahoma, Arial, sans-serif}</style>
+</head>
+
+<body>
+  <div id="main"></div>
+  <script src="../elm-compiled-by-elm-watch/elm.js"></script>
+  <script src="../src/elm-wrapper.js"></script>
+  <script>
+    const app = MSSP.init({
+      node: document.getElementById("main"),
+      flags: 
+        { user: "taro.tanaka"
+        , language: "ja-JP"
+        }
+    });
+    app.sendData( { language: "it-IT" } );
+    app.sendData( { user: "yoko.sato" } );
+    app.sendData( { a: 1, b: 2 } );
+    app.sendData( 32 );
+    app.sendData( "41" );
+    app.sendData( true );
+    app.sendData( null );
+    app.sendData( undefined );
+    app.sendData( NaN );
+  </script>
+</body>
+
+</html>

@@ -36,3 +36,12 @@ Install Elm globally with
 ```
 npm install -g @lydell/elm
 ```
+
+### To develop the Elm app
+
+```
+cd app3
+elm-watch hot
+```
+
+This will start a server at http://localhost:8002/

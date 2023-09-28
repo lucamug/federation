@@ -1,12 +1,12 @@
 {
-    "serve": "./public",
+    "serve": ".",
     "port": 8002,
     "targets": {
         "My target name": {
             "inputs": [
                 "src/Main.elm"
             ],
-            "output": "dist/elm.js"
+            "output": "elm-compiled-by-elm-watch/elm.js"
         }
     }
 }
