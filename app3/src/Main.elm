@@ -13,6 +13,12 @@ import Json.Decode
 import Url
 
 
+
+-- About unmounting
+--
+-- https://gist.github.com/supermario/4c2615806c6c561a16edf5dd7208a759
+
+
 type alias Model =
     { counter : Int
     , user : Maybe String
@@ -140,7 +146,7 @@ init flags =
       }
         |> updateUser flags.flagsFromHorizon
         |> updateLanguage flags.flagsFromHorizon
-    , Cmd.none
+    , stringFromElmToJs "mounted"
     )
 
 
@@ -175,6 +181,7 @@ unsafePercentageDecode string =
 
 type Msg
     = NoOp
+    | Unmount ()
     | ChangeCounter Int
     | ChangeSyncedCounter Int
     | StringFromJsToElm String
@@ -192,6 +199,9 @@ update : Msg -> Model -> ( Model, Cmd msg )
 update msg model =
     case msg of
         NoOp ->
+            ( model, Cmd.none )
+
+        Unmount _ ->
             ( model, Cmd.none )
 
         ChangeString string ->
@@ -309,19 +319,13 @@ viewCounter name counter msg =
         ]
 
 
-main : Program Flags Model Msg
-main =
-    Browser.element
-        { init = init
-        , view = view
-        , update = update
-        , subscriptions =
-            \_ ->
-                Sub.batch
-                    [ stringFromJsToElm StringFromJsToElm
-                    , localStorageFromJsToElm LocalStorageFromJsToElm
-                    ]
-        }
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    Sub.batch
+        [ unmount Unmount
+        , stringFromJsToElm StringFromJsToElm
+        , localStorageFromJsToElm LocalStorageFromJsToElm
+        ]
 
 
 port stringFromElmToJs : String -> Cmd msg
@@ -334,3 +338,66 @@ port localStorageFromJsToElm : (String -> msg) -> Sub msg
 
 
 port setLocalStorageItem : ( String, String ) -> Cmd msg
+
+
+
+-- UNMOUNT LOGIC
+
+
+port unmount : (() -> msg) -> Sub msg
+
+
+type alias Model_ =
+    Maybe Model
+
+
+main : Program Flags Model_ Msg
+main =
+    Browser.element
+        { init = init_
+        , view = view_
+        , update = update_
+        , subscriptions = subscriptions_
+        }
+
+
+init_ : Flags -> ( Maybe Model, Cmd msg )
+init_ flags =
+    init flags
+        |> Tuple.mapFirst Just
+
+
+update_ : Msg -> Model_ -> ( Model_, Cmd msg )
+update_ msg model_ =
+    case model_ of
+        Just model ->
+            case msg of
+                Unmount () ->
+                    ( Nothing, stringFromElmToJs "unmounted" )
+
+                _ ->
+                    update msg model
+                        |> Tuple.mapFirst Just
+
+        Nothing ->
+            ( model_, Cmd.none )
+
+
+view_ : Model_ -> Html.Html Msg
+view_ model_ =
+    case model_ of
+        Just model ->
+            view model
+
+        Nothing ->
+            Html.text ""
+
+
+subscriptions_ : Model_ -> Sub Msg
+subscriptions_ model_ =
+    case model_ of
+        Just model ->
+            subscriptions model
+
+        Nothing ->
+            Sub.none
