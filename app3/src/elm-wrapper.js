@@ -1,4 +1,4 @@
-const ElmWrapped = 
+window.ElmWrapped = 
 {
     init: obj => {
         obj = obj || {};

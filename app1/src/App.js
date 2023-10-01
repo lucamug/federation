@@ -5,7 +5,7 @@ const App = () => {
   const targetElement = useRef(null);
   useEffect(async () => {
     await import("app3/elm");
-    Elm.Main.init({
+    ElmWrapped.init({
       node: targetElement.current,
     });
   }, []);
