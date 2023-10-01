@@ -1,5 +1,5 @@
-window.ElmWrapped = 
-{
+window.ElmMFE = 
+{ Main: {
     init: obj => {
         obj = obj || {};
         obj.window = obj.window || window;
@@ -55,4 +55,4 @@ window.ElmWrapped =
             }
         }
     }
-}
+}}

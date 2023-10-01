@@ -5,7 +5,7 @@ const App = () => {
   const targetElement = useRef(null);
   useEffect(async () => {
     await import("app3/elm");
-    ElmWrapped.init({
+    ElmMFE.Main.init({
       node: targetElement.current,
     });
   }, []);
@@ -19,7 +19,7 @@ const App = () => {
       </Suspense>
       <div style={{margin: "10px", padding: "10px"}}>
         <h1>App3 (Elm)</h1>
-        <div ref={targetElement}></div>
+        <div ref={targetElement}>Loading...</div>
       </div>
     </div>
   );

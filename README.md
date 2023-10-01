@@ -48,3 +48,7 @@ This will start a server at http://localhost:8002/public/index-for-elm-watch.htm
 
 Run `cmd/build` from app3 to generate a new elm.js file.
 
+Note that Elm use `this` to expose the global `Elm` variable, instead of `window`.
+
+This get solved with `app3/cmd/minify-elm.js`.
+See https://discourse.elm-lang.org/t/what-i-ve-learned-about-minifying-elm-code/7632

@@ -2,4 +2,4 @@ dist/
 elm-stuff/
 node_modules/
 tmp/
-elm-compiled-by-elm-watch/
+temp/

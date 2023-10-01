@@ -258,7 +258,7 @@ view model =
     layout [ padding 20, Font.size 16, Font.family [] ] <|
         column [ spacing 20, width fill ]
             [ paragraph [ Font.size 20, paddingEach { top = 0, right = 0, bottom = 20, left = 0 } ]
-                [ text "Microfrontend POC - "
+                [ text "Microfrontend POC 0.4 - "
                 , text
                     (model.url
                         |> Url.fromString

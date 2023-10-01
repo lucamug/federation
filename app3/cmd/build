@@ -1,6 +1,5 @@
 #!/bin/bash
 set -eu
 
-elm make src/Main.elm --output=elm-compiled-by-elm-watch/elm.js --debug
-cat elm-compiled-by-elm-watch/elm.js src/elm-wrapper.js > elm-compiled-by-elm-watch/concatenated.js
-esbuild elm-compiled-by-elm-watch/concatenated.js --minify --target=es6 --outfile=src/elm.js
+elm make src/Main.elm --output=temp/build-elm.js --debug
+node cmd/minify-elm.js

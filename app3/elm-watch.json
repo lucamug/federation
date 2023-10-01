@@ -6,7 +6,7 @@
             "inputs": [
                 "src/Main.elm"
             ],
-            "output": "elm-compiled-by-elm-watch/elm.js"
+            "output": "temp/elm.js"
         }
     }
 }
