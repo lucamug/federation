@@ -45,3 +45,6 @@ elm-watch hot
 ```
 
 This will start a server at http://localhost:8002/public/index-for-elm-watch.html
+
+Run `cmd/build` from app3 to generate a new elm.js file.
+
