@@ -24,11 +24,35 @@ type alias Model =
     , user : Maybe String
     , language : String
     , url : String
+    , lightMode : Bool
     , fromJsHistory : List String
     , localStorage : List ( String, String )
     , cookies : List ( String, String )
     , string : String
+    , navigator : Maybe Navigator
     }
+
+
+type alias Navigator =
+    { language : String
+    , languages : List String
+    , appVersion : Maybe String
+    , platform : String
+    , userAgent : String
+    , vendor : Maybe String
+    }
+
+
+codecNavigator : Codec.Codec Navigator
+codecNavigator =
+    Codec.object Navigator
+        |> Codec.field "language" .language Codec.string
+        |> Codec.field "languages" .languages (Codec.list Codec.string)
+        |> Codec.optionalNullableField "appVersion" .appVersion Codec.string
+        |> Codec.field "platform" .platform Codec.string
+        |> Codec.field "userAgent" .userAgent Codec.string
+        |> Codec.optionalNullableField "vendor" .vendor Codec.string
+        |> Codec.buildObject
 
 
 codecModel : Codec.Codec Model
@@ -38,10 +62,12 @@ codecModel =
         |> Codec.field "user" .user (Codec.maybe Codec.string)
         |> Codec.field "language" .language Codec.string
         |> Codec.field "url" .url Codec.string
+        |> Codec.field "lightMode" .lightMode Codec.bool
         |> Codec.field "fromJsHistory" .fromJsHistory (Codec.list Codec.string)
         |> Codec.field "localStorage" .localStorage (Codec.list (Codec.tuple Codec.string Codec.string))
         |> Codec.field "cookies" .cookies (Codec.list (Codec.tuple Codec.string Codec.string))
         |> Codec.field "string" .string Codec.string
+        |> Codec.field "navigator" .navigator (Codec.maybe codecNavigator)
         |> Codec.buildObject
 
 
@@ -55,6 +81,10 @@ type alias FlagLanguage =
 
 type alias FlagUrl =
     { url : String }
+
+
+type alias FlagLightMode =
+    { lightMode : Bool }
 
 
 codecFlagUser : Codec.Codec FlagUser
@@ -75,6 +105,13 @@ codecFlagUrl : Codec.Codec FlagUrl
 codecFlagUrl =
     Codec.object FlagUrl
         |> Codec.field "url" .url Codec.string
+        |> Codec.buildObject
+
+
+codecFlagLightMode : Codec.Codec FlagLightMode
+codecFlagLightMode =
+    Codec.object FlagLightMode
+        |> Codec.field "lightMode" .lightMode Codec.bool
         |> Codec.buildObject
 
 
@@ -120,11 +157,27 @@ updateUrl string model =
            )
 
 
+updateLightMode : String -> { a | lightMode : Bool } -> { a | lightMode : Bool }
+updateLightMode string model =
+    string
+        |> Codec.decodeString codecFlagLightMode
+        |> (\res ->
+                case res of
+                    Ok flag ->
+                        { model | lightMode = flag.lightMode }
+
+                    Err _ ->
+                        model
+           )
+
+
 type alias Flags =
     { url : String
     , localStorage : String
     , cookies : String
+    , lightMode : Bool
     , flagsFromHorizon : String
+    , navigator : String
     }
 
 
@@ -139,15 +192,34 @@ init flags =
       , user = Nothing
       , language = defaultLanguage
       , url = flags.url
+      , lightMode = flags.lightMode
       , fromJsHistory = []
       , localStorage = parseLocalStorage flags.localStorage
       , cookies = parseCookies flags.cookies
       , string = "String to Host"
+      , navigator = Result.toMaybe (Codec.decodeString codecNavigator flags.navigator)
       }
-        |> updateUser flags.flagsFromHorizon
-        |> updateLanguage flags.flagsFromHorizon
+        |> updateFlags flags.flagsFromHorizon
     , stringFromElmToJs "mounted"
     )
+
+
+type alias SubModel a =
+    { a
+        | language : String
+        , lightMode : Bool
+        , url : String
+        , user : Maybe String
+    }
+
+
+updateFlags : String -> SubModel a -> SubModel a
+updateFlags string model =
+    model
+        |> updateUser string
+        |> updateLanguage string
+        |> updateUrl string
+        |> updateLightMode string
 
 
 parseLocalStorage : String -> List ( String, String )
@@ -218,9 +290,7 @@ update msg model =
 
         StringFromJsToElm string ->
             ( { model | fromJsHistory = string :: model.fromJsHistory }
-                |> updateUser string
-                |> updateLanguage string
-                |> updateUrl string
+                |> updateFlags string
             , Cmd.none
             )
 
@@ -257,22 +327,41 @@ view model =
     in
     layout [ padding 20, Font.size 16, Font.family [] ] <|
         column [ spacing 20, width fill ]
-            [ paragraph [ Font.size 20, paddingEach { top = 0, right = 0, bottom = 20, left = 0 } ]
-                [ text "Microfrontend POC 0.4 - "
-                , text
-                    (model.url
-                        |> Url.fromString
-                        |> Maybe.andThen .fragment
-                        |> Maybe.withDefault "Home"
-                        |> (\name ->
-                                if String.isEmpty name then
-                                    "Home"
+            [ row
+                [ Font.size 20
+                , paddingEach { top = 0, right = 0, bottom = 20, left = 0 }
+                , width fill
+                ]
+                [ paragraph []
+                    [ text "Microfrontend POC 0.4 - "
+                    , text
+                        (model.url
+                            |> Url.fromString
+                            |> Maybe.andThen .fragment
+                            |> Maybe.withDefault "Home"
+                            |> (\name ->
+                                    if String.isEmpty name then
+                                        "Home"
 
-                                else
-                                    name
-                           )
-                    )
-                , el [ alignRight, Font.size 13 ] <| text <| Maybe.withDefault "" model.user
+                                    else
+                                        name
+                               )
+                        )
+                    ]
+                , row [ alignRight, Font.size 13, spacing 20 ]
+                    [ el [] <|
+                        text
+                            ((if model.lightMode then
+                                "Light"
+
+                              else
+                                "Dark"
+                             )
+                                ++ " mode"
+                            )
+                    , el [] <| text model.language
+                    , el [] <| text <| Maybe.withDefault "Sign in" model.user
+                    ]
                 ]
             , row [ spacing 40, width fill ]
                 [ column [ spacing 10, alignTop ]

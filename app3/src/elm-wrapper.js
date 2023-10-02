@@ -23,19 +23,38 @@ window.ElmMFE =
             app.ports.stringFromJsToElm.send( myToString({ url: obj.window.document.location.href }) );
         };
 
+        const handleChangeMode = event => {
+            app.ports.stringFromJsToElm.send( myToString({ lightMode: event.matches ? false : true }) );
+        }
+
+        let lightMode = true;
+        if (obj.window.matchMedia && obj.window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            lightMode = false;
+        }
+        
         let app = obj.elm.Main.init({
             node: obj.node,
             flags: 
                 { url: obj.window.location.href
                 , localStorage: myToString(obj.window.localStorage)
                 , cookies: obj.window.document.cookie
+                , lightMode : lightMode
                 , flagsFromHorizon: myToString(obj.flags)
-                }
+                , navigator: myToString(
+                    { language : navigator?.language
+                    , languages : navigator?.languages
+                    , appVersion : navigator?.appVersion
+                    , platform : navigator?.platform
+                    , userAgent : navigator?.userAgent
+                    , vendor : navigator?.vendor
+                    }
+                )}
         });
         
         // Susbscription
         obj.window.addEventListener('storage', handleStorageEvents, false);
         obj.window.addEventListener('popstate', handlePopstateEvents, false);
+        obj.window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', handleChangeMode);        
         app.ports.setLocalStorageItem.subscribe(handleSetLocalStorageItemEvent);
 
         return {
@@ -46,6 +65,7 @@ window.ElmMFE =
                 // Unsusbscription
                 obj.window.removeEventListener('storage', handleStorageEvents, false);
                 obj.window.removeEventListener('popstate', handlePopstateEvents, false);
+                obj.window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', handleChangeMode);        
                 app.ports.setLocalStorageItem.unsubscribe(handleSetLocalStorageItemEvent);
 
                 // Kill the Elm app

@@ -14,6 +14,12 @@
     <script src="../src/starter.js"></script>
     <button onclick="mount()">Mount</button>
     <button onclick="unmount()">Unmount</button>
+    <button onclick="app?.send({user:null})">Sign out</button>
+    <button onclick="app?.send({user:'megumi.suzuki'})">Sign in</button>
+    <button onclick="app?.send({language:'en-US'})">en-US</button>
+    <button onclick="app?.send({language:'ja-JP'})">ja-JP</button>
+    <button onclick="app?.send({lightMode:false})">Dark mode</button>
+    <button onclick="app?.send({lightMode:true})">Light mode</button>
     <script>mount()</script>
 </body>
 

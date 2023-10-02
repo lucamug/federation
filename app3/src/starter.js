@@ -1,6 +1,9 @@
 let app;
-const handleString = (string) => {
+const handleString = string => {
     console.log(`Received by the host: "${string}"`)
+}
+const changeLanguage = language => {
+    app.send({ language: language });
 }
 const mount = () => {
     if (!app) {
@@ -14,18 +17,19 @@ const mount = () => {
         });
         // This subscription is useful to receive data from the application
         app.receive.subscribe(handleString);
-        // Object can be sent this way. Only valid object will be considered.
-        // `null` will be ignored.
+        // Object can be sent this way. Only valid values will be considered.
+        // `null`, for example, will be ignored.
         app.send(null);
-        // `language` is a valid key
-        app.send({ language: "it-IT" });
-        // An object can contain multiple keys. Is values are set to `null`,
-        // a default value will be used.
+        // Using an helper function (`language` is a valid key)
+        changeLanguage("it-IT");
+        // An object can contains multiple key/value pairs.
+        // 'null' as value is taken in consideration, case by case.
         app.send({ language: null, user: null });
+        // Invalid keys will be ingored.
+        // Invalid type of values will be considered `null`
+        app.send({ a: "1", user: 2 });
         // A value will be overwritten if sent multiple times
         app.send({ user: "yoko.sato" });
-        // Invalid keys or invalid values will be ignored
-        app.send({ a: "1", b: "2" });
     }
 }
 const unmount = () => {
