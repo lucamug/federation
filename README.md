@@ -19,7 +19,7 @@ Check out this link below for more examples:
 
 [https://github.com/module-federation/module-federation-examples](https://github.com/module-federation/module-federation-examples)
 
-## Notes by Luca
+## Notes
 
 To avoid issues with Netskope
 
