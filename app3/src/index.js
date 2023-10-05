@@ -1,7 +1,6 @@
 "use strict";
 
-require("./elm");
+require("./elm"); // This also contains elm-wrapper.js
+require("./starter");
 
-var app = ElmMFE.Main.init({
-  node: document.getElementById("main"),
-});
+mount();

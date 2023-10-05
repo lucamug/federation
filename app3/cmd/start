@@ -1,0 +1,4 @@
+#!/bin/bash
+set -eu
+
+node_modules/.bin/webpack serve --mode development --port 3000

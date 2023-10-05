@@ -5,9 +5,11 @@ const App = () => {
   const targetElement = useRef(null);
   useEffect(async () => {
     await import("app3/elm");
-    ElmMFE.Main.init({
-      node: targetElement.current,
-    });
+    await import("app3/starter");
+    mount(targetElement.current);
+    // ElmMFE.Main.init({
+    //   node: targetElement.current,
+    // });
   }, []);
   return (
     <div>

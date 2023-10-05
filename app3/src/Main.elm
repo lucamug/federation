@@ -332,7 +332,7 @@ view model =
                 , width fill
                 ]
                 [ paragraph [ Font.size 20 ]
-                    [ text "Microfrontend POC 0.5 - "
+                    [ text "Microfrontend POC 0.8 - "
                     , text
                         (model.url
                             |> Url.fromString

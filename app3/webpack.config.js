@@ -23,6 +23,7 @@ module.exports = {
       filename: "remoteEntry.js",
       exposes: {
         "./elm": "./src/elm",
+        "./starter": "./src/starter",
       },
     }),
     new HtmlWebpackPlugin({
