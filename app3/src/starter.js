@@ -1,19 +1,19 @@
-console.log("xxx ciao");
-
 window.handleString = string => {
     console.log(`Received by the host: "${string}"`)
 }
 window.changeLanguage = language => {
     app.send({ language: language });
 }
-window.mount = () => {
+window.mount = (obj) => {
     if (!window.app) {
         // Can also be initialized without arguments with `ElmMFE.Main.init()`
         // and the argument can be pussed later using `send`.
         app = ElmMFE.Main.init({
+          node: obj?.node,
           flags: 
-            { user: "megumi.suzuki"
-            , language: "en-GB"
+            { user: typeof getMemberInfo === 'function' ? getMemberInfo() : null
+            , token : typeof getTokenInfo  === 'function' ? getTokenInfo() : null
+            , language: typeof getLanguageInfo  === 'function' ? getLanguageInfo() : null
             }
         });
         // This subscription is useful to receive data from the application
@@ -34,6 +34,8 @@ window.mount = () => {
 
         window.dispatchEvent( new CustomEvent("changeUser", { detail: null }) );
         window.dispatchEvent( new CustomEvent("changeUser", { detail: "yoko.mizuno" }) );
+        window.localStorage.setItem("language","xx-05");
+        window.dispatchEvent( new CustomEvent("HOST_APP_UPDATE_LANGUAGE") );
         window.dispatchEvent( new CustomEvent("changeLanguage", { detail: "fr-FR" }) );
         window.dispatchEvent( new CustomEvent("changeMode", { detail: "dark" }) );
         window.dispatchEvent( new CustomEvent("changeMode", { detail: "light" }) );

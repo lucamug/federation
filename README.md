@@ -70,8 +70,8 @@ The Elm app register to these custom events:
 
 ```
 changeUser
-changeLanguage
-changeMode
+HOST_APP_UPDATE_LANGUAGE
+HOST_APP_UPDATE_THEME
 ```
 
 So is possible to send data to the app distapching event
@@ -79,9 +79,9 @@ So is possible to send data to the app distapching event
 ```javascript
 window.dispatchEvent( new CustomEvent("changeUser", { detail: "taro.tanaka" }) );
 window.dispatchEvent( new CustomEvent("changeUser", { detail: null }) );
-window.dispatchEvent( new CustomEvent("changeLanguage", { detail: "fr-FR" }) );
-window.dispatchEvent( new CustomEvent("changeMode", { detail: "dark" }) );
-window.dispatchEvent( new CustomEvent("changeMode", { detail: "light" }) );
+window.dispatchEvent( new CustomEvent("HOST_APP_UPDATE_LANGUAGE", { detail: "fr-FR" }) );
+window.dispatchEvent( new CustomEvent("HOST_APP_UPDATE_THEME", { detail: "dark" }) );
+window.dispatchEvent( new CustomEvent("HOST_APP_UPDATE_THEME", { detail: "light" }) );
 ```
 
 ### Receiving data
@@ -114,7 +114,7 @@ let app;
 const handleString = string => {
     console.log(`Received by the host: "${string}"`)
 }
-const changeLanguage = language => {
+const HOST_APP_UPDATE_LANGUAGE = language => {
     app.send({ language: language });
 }
 const mount = () => {
@@ -135,14 +135,14 @@ const unmount = () => {
         app = null;
     }
 }
-const changeLanguage = language => {
+const HOST_APP_UPDATE_LANGUAGE = language => {
     app.send({ language: language });
 }
 
 // To start
 mount();
 // To change language
-changeLanguage("it-IT");
+HOST_APP_UPDATE_LANGUAGE("it-IT");
 // To stop
 unmount();
 ```

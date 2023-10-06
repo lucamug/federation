@@ -6,10 +6,9 @@ const App = () => {
   useEffect(async () => {
     await import("app3/elm");
     await import("app3/starter");
-    mount(targetElement.current);
-    // ElmMFE.Main.init({
-    //   node: targetElement.current,
-    // });
+    mount({
+      node: targetElement.current,
+    });
   }, []);
   return (
     <div>

@@ -20,6 +20,13 @@ window.ElmMFE =
             }
         };
 
+        const handleStorageWithoutEvent = () => {
+            // This is the case where local storage has been modified by
+            // the host in the same page. In this case the "storage" event
+            // will not fire
+            app.ports.localStorageFromJsToElm.send(myToString(obj.window.localStorage));
+        };
+
         const handlePopstate = () => {
             app.ports.stringFromJsToElm.send( myToString({ url: obj.window.document.location.href }) );
         };
@@ -51,8 +58,9 @@ window.ElmMFE =
                 { url: obj.window.location.href
                 , localStorage: myToString(obj.window.localStorage)
                 , cookies: obj.window.document.cookie
-                , lightMode : lightMode
+                , lightMode: lightMode
                 , flagsFromHorizon: myToString(obj.flags)
+                , millis: Date.now()
                 , navigator: myToString(
                     { language : navigator?.language
                     , languages : navigator?.languages
@@ -64,12 +72,14 @@ window.ElmMFE =
                 )}
         });
         
-        // Add Event Listeners
+        // Adding Event Listeners
         obj.window.addEventListener('storage', handleStorage, false);
         obj.window.addEventListener('popstate', handlePopstate, false);
         obj.window.addEventListener('changeUser', handleChangeUser, false);
         obj.window.addEventListener('changeLanguage', handleChangeLanguage, false);
         obj.window.addEventListener('changeMode', handleChangeMode, false);
+        obj.window.addEventListener('HOST_APP_UPDATE_LANGUAGE', handleStorageWithoutEvent, false);
+        obj.window.addEventListener('HOST_APP_UPDATE_THEME', handleStorageWithoutEvent, false);
         obj.window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', handleChangeMode);        
         app.ports.setLocalStorageItem.subscribe(handleSetLocalStorageItemEvent);
 
@@ -78,12 +88,14 @@ window.ElmMFE =
             receive : app.ports.stringFromElmToJs,
             unmount : () => {
 
-                // Remove Event Listeners
+                // Removing Event Listeners
                 obj.window.removeEventListener('storage', handleStorage, false);
                 obj.window.removeEventListener('popstate', handlePopstate, false);
                 obj.window.removeEventListener('changeUser', handleChangeUser, false);
                 obj.window.removeEventListener('changeLanguage', handleChangeLanguage, false);
                 obj.window.removeEventListener('changeMode', handleChangeMode, false);
+                obj.window.removeEventListener('HOST_APP_UPDATE_LANGUAGE', handleStorageWithoutEvent, false);
+                obj.window.removeEventListener('HOST_APP_UPDATE_THEME', handleStorageWithoutEvent, false);
                 obj.window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', handleChangeMode);        
                 app.ports.setLocalStorageItem.unsubscribe(handleSetLocalStorageItemEvent);
 

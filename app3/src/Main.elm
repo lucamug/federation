@@ -8,9 +8,18 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
+import Helpers
 import Html
+import Http
 import Json.Decode
+import Random
 import Url
+import Uuid
+
+
+version : String
+version =
+    "0.4"
 
 
 
@@ -21,6 +30,7 @@ import Url
 
 type alias Model =
     { counter : Int
+    , response : Maybe (Result String String)
     , user : Maybe String
     , language : String
     , url : String
@@ -28,9 +38,25 @@ type alias Model =
     , fromJsHistory : List String
     , localStorage : List ( String, String )
     , cookies : List ( String, String )
-    , string : String
+    , stringToHost : String
     , navigator : Maybe Navigator
+    , getUrl : String
+    , getXClientId : String
+    , getXClientVersion : String
+    , getXRequestId : String
+    , getRiskyWithCredentials : Bool
+    , token : String
     }
+
+
+type EditableField
+    = GetUrl String
+    | GetXClientId String
+    | GetXClientVersion String
+    | GetXRequestId String
+    | GetRiskyWithCredentials Bool
+    | StringToHost String
+    | Token String
 
 
 type alias Navigator =
@@ -59,6 +85,7 @@ codecModel : Codec.Codec Model
 codecModel =
     Codec.object Model
         |> Codec.field "counter" .counter Codec.int
+        |> Codec.field "response" .response (Codec.maybe (Codec.result Codec.string Codec.string))
         |> Codec.field "user" .user (Codec.maybe Codec.string)
         |> Codec.field "language" .language Codec.string
         |> Codec.field "url" .url Codec.string
@@ -66,109 +93,34 @@ codecModel =
         |> Codec.field "fromJsHistory" .fromJsHistory (Codec.list Codec.string)
         |> Codec.field "localStorage" .localStorage (Codec.list (Codec.tuple Codec.string Codec.string))
         |> Codec.field "cookies" .cookies (Codec.list (Codec.tuple Codec.string Codec.string))
-        |> Codec.field "string" .string Codec.string
+        |> Codec.field "stringToHost" .stringToHost Codec.string
         |> Codec.field "navigator" .navigator (Codec.maybe codecNavigator)
+        |> Codec.field "getUrl" .getUrl Codec.string
+        |> Codec.field "getXClientId" .getXClientId Codec.string
+        |> Codec.field "getXClientVersion" .getXClientVersion Codec.string
+        |> Codec.field "getXRequestId" .getXRequestId Codec.string
+        |> Codec.field "getRiskyWithCredentials" .getRiskyWithCredentials Codec.bool
+        |> Codec.field "token" .token Codec.string
         |> Codec.buildObject
 
 
-type alias FlagUser =
-    { user : Maybe String }
+httpErrorToString : Http.Error -> String
+httpErrorToString httpError =
+    case httpError of
+        Http.BadBody string ->
+            "BadBody " ++ string
 
+        Http.BadStatus int ->
+            "BadStatus" ++ String.fromInt int
 
-type alias FlagLanguage =
-    { language : Maybe String }
+        Http.BadUrl string ->
+            "BadUrl " ++ string
 
+        Http.NetworkError ->
+            "NetworkError"
 
-type alias FlagUrl =
-    { url : String }
-
-
-type alias FlagLightMode =
-    { lightMode : Bool }
-
-
-codecFlagUser : Codec.Codec FlagUser
-codecFlagUser =
-    Codec.object FlagUser
-        |> Codec.field "user" .user (Codec.maybe Codec.string)
-        |> Codec.buildObject
-
-
-codecFlagLanguage : Codec.Codec FlagLanguage
-codecFlagLanguage =
-    Codec.object FlagLanguage
-        |> Codec.field "language" .language (Codec.maybe Codec.string)
-        |> Codec.buildObject
-
-
-codecFlagUrl : Codec.Codec FlagUrl
-codecFlagUrl =
-    Codec.object FlagUrl
-        |> Codec.field "url" .url Codec.string
-        |> Codec.buildObject
-
-
-codecFlagLightMode : Codec.Codec FlagLightMode
-codecFlagLightMode =
-    Codec.object FlagLightMode
-        |> Codec.field "lightMode" .lightMode Codec.bool
-        |> Codec.buildObject
-
-
-updateUser : String -> { a | user : Maybe String } -> { a | user : Maybe String }
-updateUser string model =
-    string
-        |> Codec.decodeString codecFlagUser
-        |> (\res ->
-                case res of
-                    Ok flag ->
-                        { model | user = flag.user }
-
-                    Err _ ->
-                        model
-           )
-
-
-updateLanguage : String -> { a | language : String } -> { a | language : String }
-updateLanguage string model =
-    string
-        |> Codec.decodeString codecFlagLanguage
-        |> (\res ->
-                case res of
-                    Ok flag ->
-                        { model | language = Maybe.withDefault defaultLanguage flag.language }
-
-                    Err _ ->
-                        model
-           )
-
-
-updateUrl : String -> { a | url : String } -> { a | url : String }
-updateUrl string model =
-    string
-        |> Codec.decodeString codecFlagUrl
-        |> (\res ->
-                case res of
-                    Ok flag ->
-                        { model | url = flag.url }
-
-                    Err _ ->
-                        model
-           )
-
-
-updateLightMode : String -> { a | lightMode : Bool } -> { a | lightMode : Bool }
-updateLightMode string model =
-    string
-        |> Codec.decodeString codecFlagLightMode
-        |> (\res ->
-                case res of
-                    Ok flag ->
-                        { model | lightMode = flag.lightMode }
-
-                    Err _ ->
-                        model
-           )
+        Http.Timeout ->
+            "Timeout"
 
 
 type alias Flags =
@@ -178,26 +130,42 @@ type alias Flags =
     , lightMode : Bool
     , flagsFromHorizon : String
     , navigator : String
+    , millis : Int
     }
-
-
-defaultLanguage : String
-defaultLanguage =
-    "en-US"
 
 
 init : Flags -> ( Model, Cmd msg )
 init flags =
+    let
+        rundomNumber : Int
+        rundomNumber =
+            -- Ok, not so random
+            flags.millis
+
+        currentSeed : Random.Seed
+        currentSeed =
+            Random.initialSeed rundomNumber
+
+        ( newUuid, newSeed ) =
+            Random.step Uuid.uuidGenerator currentSeed
+    in
     ( { counter = 0
       , user = Nothing
-      , language = defaultLanguage
+      , language = Helpers.defaultLanguage
       , url = flags.url
       , lightMode = flags.lightMode
       , fromJsHistory = []
       , localStorage = parseLocalStorage flags.localStorage
       , cookies = parseCookies flags.cookies
-      , string = "String to Host"
+      , stringToHost = "String to host"
       , navigator = Result.toMaybe (Codec.decodeString codecNavigator flags.navigator)
+      , getUrl = "http://caasper-api.jpe2-caas1-beta1.caas.jpe2z.r-local.net:80/v1/management/users/tenants"
+      , token = Helpers.defaultToken -- "Bearer {token}"
+      , getXClientId = "portal"
+      , getXClientVersion = version
+      , getXRequestId = Uuid.toString newUuid
+      , getRiskyWithCredentials = False
+      , response = Nothing
       }
         |> updateFlags flags.flagsFromHorizon
     , stringFromElmToJs "mounted"
@@ -210,16 +178,18 @@ type alias SubModel a =
         , lightMode : Bool
         , url : String
         , user : Maybe String
+        , token : String
     }
 
 
 updateFlags : String -> SubModel a -> SubModel a
 updateFlags string model =
     model
-        |> updateUser string
-        |> updateLanguage string
-        |> updateUrl string
-        |> updateLightMode string
+        |> Helpers.updateUser string
+        |> Helpers.updateLanguage string
+        |> Helpers.updateUrl string
+        |> Helpers.updateLightMode string
+        |> Helpers.updateToken string
 
 
 parseLocalStorage : String -> List ( String, String )
@@ -231,17 +201,26 @@ parseLocalStorage string =
 
 parseCookies : String -> List ( String, String )
 parseCookies string =
-    string
-        |> String.split ";"
-        |> List.map
-            (\item ->
-                case String.split "=" item of
-                    [ key, value ] ->
-                        ( unsafePercentageDecode (String.trim key), unsafePercentageDecode value )
+    let
+        trimmed : String
+        trimmed =
+            String.trim string
+    in
+    if String.isEmpty trimmed then
+        []
 
-                    _ ->
-                        ( "error_no_equal_sign", unsafePercentageDecode item )
-            )
+    else
+        trimmed
+            |> String.split ";"
+            |> List.map
+                (\item ->
+                    case String.split "=" item of
+                        [ key, value ] ->
+                            ( unsafePercentageDecode (String.trim key), unsafePercentageDecode value )
+
+                        _ ->
+                            ( "error_no_equal_sign", unsafePercentageDecode item )
+                )
 
 
 unsafePercentageDecode : String -> String
@@ -258,8 +237,10 @@ type Msg
     | ChangeSyncedCounter Int
     | StringFromJsToElm String
     | LocalStorageFromJsToElm String
-    | ChangeString String
-    | SendString String
+    | SendString
+    | ChangeField EditableField
+    | SendRequest
+    | GetResponse (Result Http.Error String)
 
 
 syncedCounterKeyName : String
@@ -267,7 +248,7 @@ syncedCounterKeyName =
     "syncedCounter"
 
 
-update : Msg -> Model -> ( Model, Cmd msg )
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         NoOp ->
@@ -276,11 +257,8 @@ update msg model =
         Unmount _ ->
             ( model, Cmd.none )
 
-        ChangeString string ->
-            ( { model | string = string }, Cmd.none )
-
-        SendString string ->
-            ( model, stringFromElmToJs string )
+        SendString ->
+            ( model, stringFromElmToJs model.stringToHost )
 
         ChangeCounter int ->
             ( { model | counter = int }, Cmd.none )
@@ -297,13 +275,68 @@ update msg model =
         LocalStorageFromJsToElm string ->
             ( { model | localStorage = parseLocalStorage string }, Cmd.none )
 
+        GetResponse response ->
+            ( { model | response = Just (Result.mapError httpErrorToString response) }, Cmd.none )
+
+        SendRequest ->
+            let
+                request =
+                    if model.getRiskyWithCredentials then
+                        Http.riskyRequest
+
+                    else
+                        Http.request
+            in
+            ( { model | response = Nothing }
+            , request
+                { method = "GET"
+                , headers =
+                    [ Http.header "Authorization" ("Bearer " ++ model.token)
+                    , Http.header "X-Client-Id" model.getXClientId
+                    , Http.header "X-Client-Version" model.getXClientVersion
+                    , Http.header "X-Request-Id" model.getXRequestId
+                    ]
+                , url = model.getUrl
+                , body = Http.emptyBody
+                , expect = Http.expectString GetResponse
+                , timeout = Nothing
+                , tracker = Nothing
+                }
+            )
+
+        ChangeField editableField ->
+            ( case editableField of
+                GetUrl string ->
+                    { model | getUrl = string }
+
+                Token string ->
+                    { model | token = string }
+
+                GetXClientId string ->
+                    { model | getXClientId = string }
+
+                GetXClientVersion string ->
+                    { model | getXClientVersion = string }
+
+                GetXRequestId string ->
+                    { model | getXRequestId = string }
+
+                GetRiskyWithCredentials bool ->
+                    { model | getRiskyWithCredentials = bool }
+
+                StringToHost string ->
+                    { model | stringToHost = string }
+            , Cmd.none
+            )
+
 
 attrsButton : List (Attribute msg)
 attrsButton =
     [ Border.rounded 5
     , Background.color <| rgb 0.9 0.9 0.9
-    , width <| px 40
+    , Font.center
     , height <| px 40
+    , paddingXY 15 0
     ]
 
 
@@ -324,6 +357,12 @@ view model =
                 |> Dict.get syncedCounterKeyName
                 |> Maybe.andThen String.toInt
                 |> Maybe.withDefault 0
+
+        attrsLabel =
+            [ width <| px 150 ]
+
+        attrsRow =
+            [ paddingEach { top = 0, right = 0, bottom = 0, left = 170 }, spacing 20, width fill ]
     in
     layout [ padding 20, Font.size 16, Font.family [] ] <|
         column [ spacing 20, width fill ]
@@ -332,7 +371,7 @@ view model =
                 , width fill
                 ]
                 [ paragraph [ Font.size 20 ]
-                    [ text "Microfrontend POC 0.8 - "
+                    [ text <| "Microfrontend POC " ++ version ++ " - "
                     , text
                         (model.url
                             |> Url.fromString
@@ -362,8 +401,14 @@ view model =
                     , el [] <| text <| Maybe.withDefault "Sign in" model.user
                     ]
                 ]
-            , row [ spacing 40, width fill ]
-                [ column [ spacing 10, alignTop ]
+            , row [ spacing 20, width fill ]
+                [ column
+                    [ spacing 10
+                    , alignTop
+                    , Background.color <| rgb 0.9 0.9 0.9
+                    , height fill
+                    , padding 20
+                    ]
                     [ link attrsLink { url = "#", label = text "Home" }
                     , link attrsLink { url = "#page1", label = text "Page 1" }
                     , link attrsLink { url = "#page2", label = text "Page 2" }
@@ -373,20 +418,42 @@ view model =
                         [ viewCounter "Counter" model.counter ChangeCounter
                         , viewCounter "Synced counter" syncedCounter ChangeSyncedCounter
                         ]
-                    , row [ spacing 10, width fill ]
-                        [ Input.text [ width fill, height <| px 42 ] { onChange = ChangeString, text = model.string, placeholder = Nothing, label = Input.labelHidden "" }
-                        , Input.button [ Background.color <| rgb 0.8 0.8 0.8, height <| px 42, padding 10, Border.rounded 5 ] { label = text "Send to Host", onPress = Just <| SendString model.string }
+                    , column [ spacing 10, width fill ]
+                        [ row [ spacing 10, width fill ]
+                            [ Input.text [] { label = Input.labelLeft attrsLabel (text "Url"), onChange = ChangeField << GetUrl, placeholder = Nothing, text = model.getUrl }
+                            , Input.button (attrsButton ++ [ width <| px 200 ]) { label = text "Send GET request", onPress = Just SendRequest }
+                            ]
+                        , row attrsRow
+                            [ Input.text [] { label = Input.labelLeft attrsLabel (text "Token"), onChange = ChangeField << Token, placeholder = Nothing, text = model.token }
+                            , Input.text [] { label = Input.labelLeft attrsLabel (text "X-Client-Id"), onChange = ChangeField << GetXClientId, placeholder = Nothing, text = model.getXClientId }
+                            ]
+                        , row attrsRow
+                            [ Input.text [] { label = Input.labelLeft attrsLabel (text "X-Client-Version"), onChange = ChangeField << GetXClientVersion, placeholder = Nothing, text = model.getXClientVersion }
+                            , Input.text [] { label = Input.labelLeft attrsLabel (text "X-Request-Id"), onChange = ChangeField << GetXRequestId, placeholder = Nothing, text = model.getXRequestId }
+                            ]
+                        , row (attrsRow ++ [ height <| px 40 ])
+                            [ Input.checkbox [ height <| px 20 ]
+                                { onChange = ChangeField << GetRiskyWithCredentials
+                                , icon = Input.defaultCheckbox
+                                , checked = model.getRiskyWithCredentials
+                                , label = Input.labelLeft attrsLabel (text "With Credentials")
+                                }
+                            ]
                         ]
-                    , paragraph [] [ text "Model" ]
-                    , Input.multiline [ width fill, Border.rounded 5 ]
-                        { onChange = \_ -> NoOp
-                        , text = Codec.encodeToString 4 codecModel model
-                        , placeholder = Nothing
-                        , label = Input.labelHidden ""
-                        , spellcheck = False
-                        }
+                    , row [ spacing 10, width fill ]
+                        [ Input.text [ width fill, height <| px 42 ] { onChange = ChangeField << StringToHost, text = model.stringToHost, placeholder = Nothing, label = Input.labelLeft attrsLabel (text "String to host") }
+                        , Input.button (attrsButton ++ [ width <| px 200 ]) { label = text "Send string to host", onPress = Just SendString }
+                        ]
                     ]
                 ]
+            , paragraph [] [ text "Model" ]
+            , Input.multiline [ width fill, Border.rounded 5 ]
+                { onChange = \_ -> NoOp
+                , text = Codec.encodeToString 4 codecModel model
+                , placeholder = Nothing
+                , label = Input.labelHidden ""
+                , spellcheck = False
+                }
             ]
 
 
@@ -455,7 +522,7 @@ init_ flags =
         |> Tuple.mapFirst Just
 
 
-update_ : Msg -> Model_ -> ( Model_, Cmd msg )
+update_ : Msg -> Model_ -> ( Model_, Cmd Msg )
 update_ msg model_ =
     case model_ of
         Just model ->
