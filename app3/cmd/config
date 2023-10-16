@@ -1,0 +1,100 @@
+#!/bin/bash
+set -eu
+
+# This is a configuration file read by the other bash scripts
+
+# Variables
+
+
+VERSION=$(cat package.json \
+  | grep version \
+  | head -1 \
+  | awk -F: '{ print $2 }' \
+  | sed 's/[",]//g' \
+  | tr -d '[[:space:]]')                            # Example: 2.10.0
+FOLDER_CURRENT=$(pwd)
+SERVICE=$(basename $FOLDER_CURRENT)
+TENANT=$(basename $(dirname $FOLDER_CURRENT))
+SINGULARITY_REPO_NAME="singularity"
+S3_BUCKET=$(printenv NX_S3_ENDPOINT_APP)             || true
+REPO=$(basename $(git rev-parse --show-toplevel))
+BRANCH_ENV=$(printenv BRANCH)                        || true
+BRANCH=$(git branch | sed -n -e 's/^\* \(.*\)/\1/p') || true
+COMMIT=$(git rev-parse --short HEAD)                 || true
+BUILD_EPOCH=$(date +%s)                                       # Example: 1674303385
+BUILD_TIMESTAMP_ISO=$(date +"%Y-%m-%dT%H:%M:%S%z")            # Example: 2023-01-21T21:16:25+0900
+BUILD_TIMESTAMP=$(date)                                       # Example: Sat Jan 21 21:16:25 JST 2023
+META="{\"commit\":\"${COMMIT}\",\"branch\":\"${BRANCH}\",\"version\":\"${VERSION}\",\"datetime\":\"${BUILD_TIMESTAMP_ISO}\",\"posix\":${BUILD_EPOCH},\"tenant\":\"${TENANT}\",\"service\":\"${SERVICE}\"}"
+
+# Changing the Elm home directory to avoid possible conflicts between the Elm
+# caching system and the Nx/Jenkins caching system.
+export ELM_HOME=${HOME}/.elm_singularity_${SERVICE}
+
+BASE_HREF="./"
+
+if [[ -z "${BRANCH_ENV}" ]]; then
+  IS_SINGULARITY_PIPELINE="false"
+else
+  IS_SINGULARITY_PIPELINE="true"
+fi
+
+# Folders
+
+FOLDER_ROOT="../../.."
+FOLDER_DIST="${FOLDER_ROOT}/dist/apps/${TENANT}/${SERVICE}"
+FOLDER_TEMP="${FOLDER_DIST}/TEMP"
+FOLDER_NODE_MODULES="${FOLDER_ROOT}/node_modules"
+
+# Tools
+
+ELM=$FOLDER_NODE_MODULES/.bin/elm
+ELM_GO=$FOLDER_NODE_MODULES/.bin/elm-go
+ELM_JSON=$FOLDER_NODE_MODULES/.bin/elm-json
+ELM_DOC_PREVIEW=$FOLDER_NODE_MODULES/.bin/elm-doc-preview
+ELM_REVIEW=$FOLDER_NODE_MODULES/.bin/elm-review
+ELM_FORMAT=$FOLDER_NODE_MODULES/.bin/elm-format
+ELM_TEST=$FOLDER_NODE_MODULES/.bin/elm-test
+ELM_WATCH=$FOLDER_NODE_MODULES/.bin/elm-watch
+NODEAPP_TERSER=$FOLDER_NODE_MODULES/.bin/terser
+NODEAPP_ESBUILD=$FOLDER_NODE_MODULES/.bin/esbuild
+NODEAPP_REPLACE=$FOLDER_NODE_MODULES/.bin/replace
+NODEAPP_HTML_MINIFIER=$FOLDER_NODE_MODULES/.bin/html-minifier
+NODEAPP_NPM_CHECK_UPDATES=$FOLDER_NODE_MODULES/.bin/npm-check-updates
+NODEAPP_WEBPACK=$FOLDER_NODE_MODULES/.bin/webpack-cli
+NODEAPP_HTTP_SERVER=$FOLDER_NODE_MODULES/.bin/http-server
+
+# Colors
+# https://dev.to/ifenna__/adding-colors-to-bash-scripts-48g4
+
+RED="\e[31m"
+GREEN="\e[32m"
+YELLOW="\e[33m"
+BLUE="\e[34m"
+MAGENTA="\e[35m"
+CYAN="\e[36m"
+GRAY="\e[90m"
+BLACK="\e[30m"
+
+LIGHT_RED="\e[91m"
+LIGHT_GREEN="\e[92m"
+LIGHT_YELLOW="\e[93m"
+LIGHT_BLUE="\e[94m"
+LIGHT_MAGENTA="\e[95m"
+LIGHT_CYAN="\e[96m"
+LIGHT_GRAY="\e[37m"
+
+POINT="✨ "
+STOP="\e[0m"
+PRIMARY=$YELLOW
+SECONDARY=$BLUE
+DONE=" ${SECONDARY}done${STOP}\n"
+
+
+printf "\n"
+printf "${BLUE}                      ▄▄▗   ${STOP}\n"
+printf "${BLUE}                      ▙▖▐▗▄▄${STOP}\n"
+printf "${BLUE}                      ▙▄▐▐▐▐${STOP}\n"
+printf "${BLUE}▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔${STOP}\n"
+TEXT="${TENANT} ♦ ${SERVICE} ♦ ${COMMIT} ♦ ${VERSION}"
+printf "${BLUE}%*s${STOP}\n" $(((${#TEXT}+48)/2)) "${TEXT}"
+printf " \n"

@@ -61,6 +61,7 @@ window.ElmMFE =
                 , lightMode: lightMode
                 , flagsFromHorizon: myToString(obj.flags)
                 , millis: Date.now()
+                , meta: metaInternal
                 , navigator: myToString(
                     { language : navigator?.language
                     , languages : navigator?.languages

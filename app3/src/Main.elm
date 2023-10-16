@@ -11,15 +11,13 @@ import Element.Input as Input
 import Helpers
 import Html
 import Http
+import Iso8601
 import Json.Decode
 import Random
+import Time
+import Time.Distance
 import Url
 import Uuid
-
-
-version : String
-version =
-    "0.5"
 
 
 
@@ -46,7 +44,33 @@ type alias Model =
     , getXRequestId : String
     , getRiskyWithCredentials : Bool
     , token : String
+    , millis : Int
+    , meta : Meta
     }
+
+
+type alias Meta =
+    { branch : String
+    , commit : String
+    , datetime : String
+    , posix : Int
+    , service : String
+    , tenant : String
+    , version : String
+    }
+
+
+codecMeta : Codec.Codec Meta
+codecMeta =
+    Codec.object Meta
+        |> Codec.field "branch" .branch Codec.string
+        |> Codec.field "commit" .commit Codec.string
+        |> Codec.field "datetime" .datetime Codec.string
+        |> Codec.field "posix" .posix Codec.int
+        |> Codec.field "service" .service Codec.string
+        |> Codec.field "tenant" .tenant Codec.string
+        |> Codec.field "version" .version Codec.string
+        |> Codec.buildObject
 
 
 type EditableField
@@ -101,6 +125,8 @@ codecModel =
         |> Codec.field "getXRequestId" .getXRequestId Codec.string
         |> Codec.field "getRiskyWithCredentials" .getRiskyWithCredentials Codec.bool
         |> Codec.field "token" .token Codec.string
+        |> Codec.field "millis" .millis Codec.int
+        |> Codec.field "meta" .meta codecMeta
         |> Codec.buildObject
 
 
@@ -131,6 +157,7 @@ type alias Flags =
     , flagsFromHorizon : String
     , navigator : String
     , millis : Int
+    , meta : Meta
     }
 
 
@@ -162,10 +189,12 @@ init flags =
       , getUrl = "http://caasper-api.jpe2-caas1-beta1.caas.jpe2z.r-local.net:80/v1/management/users/tenants"
       , token = Helpers.defaultToken -- "Bearer {token}"
       , getXClientId = "portal"
-      , getXClientVersion = version
+      , getXClientVersion = flags.meta.version
       , getXRequestId = Uuid.toString newUuid
       , getRiskyWithCredentials = False
       , response = Nothing
+      , millis = flags.millis
+      , meta = flags.meta
       }
         |> updateFlags flags.flagsFromHorizon
     , stringFromElmToJs "mounted"
@@ -366,12 +395,9 @@ view model =
     in
     layout [ padding 20, Font.size 16, Font.family [] ] <|
         column [ spacing 20, width fill ]
-            [ row
-                [ paddingEach { top = 0, right = 0, bottom = 20, left = 0 }
-                , width fill
-                ]
+            [ row [ width fill ]
                 [ paragraph [ Font.size 20 ]
-                    [ text <| "Microfrontend POC " ++ version ++ " - "
+                    [ text <| "Microfrontend POC " ++ model.meta.version ++ " - "
                     , text
                         (model.url
                             |> Url.fromString
@@ -400,6 +426,12 @@ view model =
                     , el [] <| text model.language
                     , el [] <| text <| Maybe.withDefault "Sign in" model.user
                     ]
+                ]
+            , paragraph [ paddingEach { top = 0, right = 0, bottom = 20, left = 0 } ]
+                [ text "Commit "
+                , text model.meta.commit
+                , text " - Built on "
+                , text <| posixBeautifier (Time.millisToPosix model.millis) (model.meta.posix * 1000)
                 ]
             , row [ spacing 20, width fill ]
                 [ column
@@ -455,6 +487,33 @@ view model =
                 , spellcheck = False
                 }
             ]
+
+
+posixBeautifier : Time.Posix -> Int -> String
+posixBeautifier posixAtStart millis =
+    let
+        posixUtc : Time.Posix
+        posixUtc =
+            millis
+                |> Time.millisToPosix
+    in
+    millis
+        |> posixBeautifierWithoutTimeDistanceInWords
+        |> (\s -> s ++ " (" ++ Time.Distance.inWords posixUtc posixAtStart ++ ")")
+
+
+posixBeautifierWithoutTimeDistanceInWords : Int -> String
+posixBeautifierWithoutTimeDistanceInWords millis =
+    let
+        posixJST : Time.Posix
+        posixJST =
+            millis
+                |> (+) (9 * 60 * 60 * 1000)
+                |> Time.millisToPosix
+    in
+    posixJST
+        |> Iso8601.fromTime
+        |> String.left 10
 
 
 viewCounter : String -> Int -> (Int -> msg) -> Element msg
