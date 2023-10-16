@@ -23,4 +23,4 @@ const result = esbuild.transformSync(newElmCode + wrapperCode, {
 });
 
 
-fs.writeFileSync("src/elm.js", result.code);
+fs.writeFileSync("src/elm-mfe.js", result.code);

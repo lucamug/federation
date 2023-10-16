@@ -22,7 +22,7 @@ module.exports = {
       name: "app3",
       filename: "remoteEntry.js",
       exposes: {
-        "./elm": "./src/elm",
+        "./elm-mfe": "./src/elm-mfe",
         "./starter": "./src/starter",
       },
     }),
